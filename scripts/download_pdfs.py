@@ -126,7 +126,7 @@ def main():
             "      To enable: pip install playwright && playwright install chromium\n"
         )
 
-    REQUIRED_METRICS = ("operating_income", "income_tax", "stockholders_equity")
+    REQUIRED_METRICS = ("operating_income", "stockholders_equity", "capital_expenditures")
 
     eligible = [
         row for row in data

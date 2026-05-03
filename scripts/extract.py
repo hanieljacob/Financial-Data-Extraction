@@ -2,7 +2,7 @@
 Extract three financial fields from 10-K PDFs via Gemini and evaluate against
 XBRL ground truth from edgar_single_source.json.
 
-Fields: operating_income, income_tax, stockholders_equity
+Fields: operating_income, stockholders_equity, capital_expenditures
 Scope:  up to MAX_PDFS PDFs in data/pdfs/ that have all three ground-truth values
 Output: data/db/extraction_results.db  (SQLite — each run appended with a unique run_id)
 """
@@ -34,7 +34,7 @@ MAX_PDFS = 30
 
 gemini = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
-METRICS = ("operating_income", "income_tax", "stockholders_equity")
+METRICS = ("operating_income", "stockholders_equity", "capital_expenditures")
 
 
 # ── Ground truth ──────────────────────────────────────────────────────────────
@@ -62,35 +62,35 @@ def parse_filename(name: str) -> tuple[str | None, int | None]:
 
 # ── Text extraction ───────────────────────────────────────────────────────────
 
-def _is_garbled(text: str) -> bool:
-    """True if the text contains enough CID codes to be unreadable."""
-    return text.count("(cid:") > 30
+_FS_KEYWORDS = [
+    "cash flows", "statement of cash", "financing activities", "investing activities",
+    "statement of operations", "statement of income", "statements of earnings",
+    "statements of income", "income from operations", "operating income",
+    "results of operations", "balance sheet", "stockholders", "shareholders",
+]
 
 
-def _extract_with_pdfplumber(pdf_path: Path) -> str:
-    with pdfplumber.open(pdf_path) as pdf:
-        pages = [p.extract_text() or "" for p in pdf.pages]
-    return "\n\n".join(pages)
-
-
-def _extract_with_pymupdf(pdf_path: Path) -> str:
-    import fitz
-    with fitz.open(pdf_path) as doc:
-        pages = [doc[i].get_text() for i in range(len(doc))]
-    return "\n\n".join(pages)
+def _financial_pages(pages: list[str]) -> list[str]:
+    """Return only pages that look like financial statements (± 1 page buffer)."""
+    keep = set()
+    for i, p in enumerate(pages):
+        lower = p.lower()
+        if any(kw in lower for kw in _FS_KEYWORDS):
+            keep.update([i - 1, i, i + 1])
+    keep = sorted(k for k in keep if 0 <= k < len(pages))
+    return [pages[i] for i in keep] if keep else pages
 
 
 def extract_financial_text(pdf_path: Path) -> str:
-    """
-    Extract text from income statement and balance sheet pages.
-    Falls back to pymupdf if pdfplumber produces CID-encoded garbled text.
-    """
     try:
-        text = _extract_with_pdfplumber(pdf_path)
-        if _is_garbled(text):
+        with pdfplumber.open(pdf_path) as pdf:
+            pages = [p.extract_text() or "" for p in pdf.pages]
+        if pages and pages[0].count("(cid:") > 10:
             print("(cid font, retrying with pymupdf)", end="  ", flush=True)
-            text = _extract_with_pymupdf(pdf_path)
-        return text
+            import fitz
+            with fitz.open(pdf_path) as doc:
+                pages = [doc[i].get_text() for i in range(len(doc))]
+        return "\n\n".join(_financial_pages(pages))
     except Exception as e:
         return f"[PDF read error: {e}]"
 
@@ -98,24 +98,30 @@ def extract_financial_text(pdf_path: Path) -> str:
 # ── LLM call ─────────────────────────────────────────────────────────────────
 
 PROMPT_TEMPLATE = """\
-Extract three financial figures from this 10-K excerpt.
+Extract three financial figures from this 10-K filing.
 Company: {company}, fiscal year ending in {year}.
 
-Definitions:
-- operating_income:      operating income (or loss) for {year}. Also labelled "income from \
-operations" or "operating profit". Can be negative. Do NOT return income before taxes or net income.
-- income_tax:            income tax expense (or benefit) for {year}. Also labelled "provision for \
-income taxes". Return as POSITIVE for expense — even if the PDF shows it in parentheses as a \
-deduction from income. Return NEGATIVE only if the line is literally labelled "benefit for income \
-taxes" and represents a net tax credit that increases income.
-- stockholders_equity:   total stockholders' equity (or shareholders' equity) as of the \
-fiscal year-end in {year}. Can be negative (deficit). Do NOT return total equity including \
-noncontrolling interests unless no parent-only figure exists.
+- operating_income: Consolidated operating income (or loss) for {year} from the Statement of
+  Operations/Income/Earnings — the subtotal BEFORE interest expense and income taxes.
+  If results are shown by segment, use the consolidated total across all segments.
+  If no line is explicitly labeled "operating income", derive it as total revenue minus
+  all operating expenses (COGS + SG&A + R&D + D&A + other operating items).
+  Do NOT substitute "income before taxes".
 
-Rules:
-- Return the RAW number exactly as printed in the table — do not scale it yourself.
-- Find the unit in each table header: "(in millions)", "(in thousands)", etc. If none, use "actual".
-- Return null for raw_value if the figure is not present in the excerpt.
+- stockholders_equity: Total stockholders' equity (or deficit) attributable to the PARENT
+  COMPANY ONLY as of the fiscal year-end balance sheet date for {year}.
+  If the balance sheet lists "Noncontrolling interests" or "Minority interest" as a separate
+  line, use the line ABOVE it (parent-only subtotal), NOT the grand total that includes NCI.
+  Do NOT return "Total liabilities and stockholders' equity".
+  Use the {year} column only — ignore prior-year comparative columns.
+
+- capital_expenditures: Cash paid for purchases of property, plant and equipment for {year}
+  from the investing activities section of the Cash Flow Statement.
+  Use ONLY the continuing operations figure. Do NOT add discontinued operations CapEx.
+
+Return the RAW number exactly as printed in the financial statements.
+Find the unit in the nearest table header: "(in millions)", "(in thousands)", etc. If none, use "actual".
+Return null for raw_value if the figure genuinely cannot be found or derived.
 
 Excerpt:
 {text}
@@ -123,9 +129,9 @@ Excerpt:
 JSON only, no extra text:
 {{
   "operating_income":    {{"raw_value": <number or null>, "unit": "millions|thousands|actual"}},
-  "income_tax":          {{"raw_value": <number or null>, "unit": "millions|thousands|actual"}},
   "stockholders_equity": {{"raw_value": <number or null>, "unit": "millions|thousands|actual"}},
-  "note": "<one line>"
+  "capital_expenditures": {{"raw_value": <number or null>, "unit": "millions|thousands|actual"}},
+  "note": "<one line: where each figure was found>"
 }}"""
 
 MULTIPLIERS = {"millions": 1_000_000, "thousands": 1_000, "actual": 1}
@@ -138,7 +144,11 @@ def call_llm(text: str, company: str, year: int) -> dict:
             resp = gemini.models.generate_content(
                 model=MODEL,
                 contents=prompt,
-                config=types.GenerateContentConfig(temperature=0, max_output_tokens=512),
+                config=types.GenerateContentConfig(
+                    temperature=0,
+                    max_output_tokens=512,
+                    thinking_config=types.ThinkingConfig(thinking_budget=0),
+                ),
             )
         except Exception as e:
             if attempt < 3:
@@ -263,9 +273,10 @@ def main():
             gt_val    = gt_vals[metric]
             if extracted is None or gt_val == 0:
                 error_pct = None
+                correct   = False
             else:
                 error_pct = abs(extracted - gt_val) / abs(gt_val) * 100
-            correct   = extracted is not None and extracted == gt_val
+                correct   = extracted is not None and extracted == gt_val
             row_results.append({
                 "file":         pdf_path.name,
                 "company":      company,

@@ -19,15 +19,16 @@ import requests
 
 HEADERS = {"User-Agent": "Haniel Thomson hanielthomson@gmail.com"}
 
-TARGET_METRICS = ("operating_income", "income_tax", "stockholders_equity")
+TARGET_METRICS = ("operating_income", "stockholders_equity", "capital_expenditures")
 TARGET_COUNT   = 30
 
-# ~300 S&P 500 / large-cap tickers across all sectors — enough to find 200
-# that have all three target metrics in their most recent 10-K.
 TICKERS = [
-    # Technology
+    # Current set
     "AAPL", "MSFT", "NVDA", "GOOGL", "META", "AVGO", "ORCL", "AMD", "QCOM",
-    "BLK", "JNJ", "ABBV", "AMGN", "GILD", "BIIB", "AMZN", "HD", "MCD", "LOW", "SBUX", "TJX", "BKNG", "CMG", "WMT", "PG", "KO", "PEP", "COST", "PM", "MO", "MDLZ", "KHC", "GIS", "XOM", "CVX", "COP", "EOG", "SLB", "HAL", "BKR", "VLO", "PSX", "MPC", "BA", "GE", "HON", "MMM", "CAT", "DE", "EMR", "ETN", "ITW", "LMT",
+    "BLK", "ABBV", "AMGN", "GILD", "BIIB", "AMZN", "HD", "LOW", "SBUX", "TJX",
+    "BKNG", "CMG", "WMT", "PG", "KO", "PEP", "COST", "PM", "MO", "MDLZ", "KHC",
+    "MRK", "LLY", "PFE", "UNH", "CVS", "XOM", "CVX", "COP", "SLB", "CAT", "DE", "GE", "HON", "MMM", "UPS", "FDX", "MCD", "DIS", "JPM", "BAC", "GS",
+    "INTC", "TXN", "CSCO", "CRM",
 ]
 
 METRICS: dict[str, dict] = {
@@ -35,16 +36,16 @@ METRICS: dict[str, dict] = {
         "instantaneous": False,
         "concepts": ["OperatingIncomeLoss"],
     },
-    "income_tax": {
-        "instantaneous": False,
-        "concepts": ["IncomeTaxExpenseBenefit"],
-    },
     "stockholders_equity": {
         "instantaneous": True,
         "concepts": [
             "StockholdersEquity",
             "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest",
         ],
+    },
+    "capital_expenditures": {
+        "instantaneous": False,
+        "concepts": ["PaymentsToAcquirePropertyPlantAndEquipment"],
     },
 }
 
@@ -251,7 +252,7 @@ def main():
 
         results.append(row)
         print(f"year={best_year}  oi={row['operating_income']:>15,}  "
-              f"tax={row['income_tax']:>15,}  eq={row['stockholders_equity']:>15,}")
+              f"eq={row['stockholders_equity']:>15,}  capex={row['capital_expenditures']:>15,}")
 
     OUT_FILE.write_text(json.dumps(results, indent=2))
 

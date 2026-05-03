@@ -109,7 +109,11 @@ Company: {company}, fiscal year ending in {year}.
   gross profit, then CONTINUE subtracting ALL remaining operating expenses (SG&A, selling expenses,
   R&D, D&A, restructuring, impairments, and any other items above the operating income subtotal).
   WARNING: revenue minus cost of sales alone gives GROSS PROFIT, not operating income.
-  Do NOT substitute "income before taxes" or "pretax income".
+  In segment reconciliation tables, the unlabeled total of all segment profits immediately
+  before "General corporate expense" is operating income, even without an explicit label.
+  Last resort only: if no OI line or segment total exists, compute income before taxes PLUS
+  net interest expense (interest expense minus interest income).
+  Do NOT return income before taxes directly.
 
 - stockholders_equity: Total stockholders' equity (or deficit) attributable to the PARENT
   COMPANY ONLY as of the fiscal year-end balance sheet date for {year}. This corresponds to

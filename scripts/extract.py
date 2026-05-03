@@ -101,18 +101,25 @@ PROMPT_TEMPLATE = """\
 Extract three financial figures from this 10-K filing.
 Company: {company}, fiscal year ending in {year}.
 
-- operating_income: Consolidated operating income (or loss) for {year} from the Statement of
-  Operations/Income/Earnings — the subtotal BEFORE interest expense and income taxes.
+- operating_income: Consolidated operating income (or loss) for {year} — the subtotal BEFORE
+  interest expense and income taxes. Valid labels: "operating income", "income from operations",
+  "operating profit", "income before interest and taxes", "income before interest, taxes and other".
   If results are shown by segment, use the consolidated total across all segments.
-  If no line is explicitly labeled "operating income", derive it as total revenue minus
-  all operating expenses (COGS + SG&A + R&D + D&A + other operating items).
-  Do NOT substitute "income before taxes".
+  If no explicit line exists, derive it: start with total revenue, subtract cost of sales to get
+  gross profit, then CONTINUE subtracting ALL remaining operating expenses (SG&A, selling expenses,
+  R&D, D&A, restructuring, impairments, and any other items above the operating income subtotal).
+  WARNING: revenue minus cost of sales alone gives GROSS PROFIT, not operating income.
+  Do NOT substitute "income before taxes" or "pretax income".
 
 - stockholders_equity: Total stockholders' equity (or deficit) attributable to the PARENT
-  COMPANY ONLY as of the fiscal year-end balance sheet date for {year}.
-  If the balance sheet lists "Noncontrolling interests" or "Minority interest" as a separate
-  line, use the line ABOVE it (parent-only subtotal), NOT the grand total that includes NCI.
-  Do NOT return "Total liabilities and stockholders' equity".
+  COMPANY ONLY as of the fiscal year-end balance sheet date for {year}. This corresponds to
+  the XBRL concept us-gaap:StockholdersEquity — equity of the parent entity's shareholders only,
+  explicitly EXCLUDING any noncontrolling (minority) interest portion.
+  Prefer a line that contains the company's own name, e.g. "Total [Company] stockholders' equity".
+  If the balance sheet has a subtotal for parent equity AND a separate line for "Noncontrolling
+  interests", "Noncontrolling interest", "Redeemable noncontrolling interests", or "Minority
+  interest", use the parent subtotal BEFORE those lines, not the grand total after them.
+  Do NOT return "Total liabilities and stockholders' equity" or any total that includes NCI.
   Use the {year} column only — ignore prior-year comparative columns.
 
 - capital_expenditures: Cash paid for purchases of property, plant and equipment for {year}

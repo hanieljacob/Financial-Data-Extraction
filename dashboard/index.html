@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>10-K Extraction Dashboard</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script type="importmap">
+    { "imports": { "d3": "https://cdn.jsdelivr.net/npm/d3@7/+esm" } }
+  </script>
+</head>
+<body>
+<div class="dash">
+
+  <header>
+    <h1>10-K Extraction Dashboard</h1>
+    <p>Improvement cycles only &nbsp;·&nbsp; 30 companies &nbsp;·&nbsp; 3 fields: Operating Income, Stockholders' Equity, Capital Expenditures</p>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="card">
+    <h2>Extraction Accuracy Over Refinement Cycles</h2>
+    <div class="sub">Per-metric accuracy (%) across improvement iterations — regression runs removed</div>
+    <div id="acc-chart"></div>
+    <div class="leg" id="acc-leg"></div>
+  </div>
+
+  <div class="card">
+    <h2>Extraction Results by Company</h2>
+    <div class="sub">Each cell: ✓ correct &nbsp;|&nbsp; error % if wrong &nbsp;|&nbsp; gray if null. Hover for raw values.</div>
+    <div class="run-filter" id="run-filter"></div>
+    <div id="heatmap"></div>
+  </div>
+
+  <div class="card">
+    <h2>Extracted vs Ground Truth — All 30 Reports</h2>
+    <div class="sub">Extracted / Ground Truth ratio per company per metric. 1.0× = perfect. Companies sorted by ground truth magnitude.</div>
+    <div class="three" id="forest"></div>
+  </div>
+
+</div>
+<div id="tip"></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

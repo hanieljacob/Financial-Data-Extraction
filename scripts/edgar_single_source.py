@@ -27,8 +27,9 @@ TICKERS = [
     "AAPL", "MSFT", "NVDA", "GOOGL", "META", "AVGO", "ORCL", "AMD", "QCOM",
     "BLK", "ABBV", "AMGN", "GILD", "BIIB", "AMZN", "HD", "LOW", "SBUX", "TJX",
     "BKNG", "CMG", "WMT", "PG", "KO", "PEP", "COST", "PM", "MO", "MDLZ", "KHC",
-    "MRK", "LLY", "PFE", "UNH", "CVS", "XOM", "CVX", "COP", "SLB", "CAT", "DE", "GE", "HON", "MMM", "UPS", "FDX", "MCD", "DIS", "JPM", "BAC", "GS",
-    "INTC", "TXN", "CSCO", "CRM",
+    "MRK", "LLY", "PFE", "UNH", "CVS", "XOM", "CVX", "COP", "SLB", "CAT", "DE",
+    "GE", "HON", "MMM", "UPS", "FDX", "MCD", "DIS", "JPM", "BAC", "GS", "INTC", 
+    "TXN", "CSCO", "CRM",
 ]
 
 METRICS: dict[str, dict] = {

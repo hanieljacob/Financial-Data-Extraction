@@ -70,27 +70,62 @@ _FS_KEYWORDS = [
 ]
 
 
-def _financial_pages(pages: list[str]) -> list[str]:
-    """Return only pages that look like financial statements (± 1 page buffer)."""
+_TABLE_TRIGGER_KEYWORDS = ["segment profit", "total capital expenditures"]
+
+_SEGMENT_TOTAL_RE = re.compile(
+    r'(?m)^(\d[\d,]+(?:\s+\$\s+[\d,]+)+)\n(General corporate expense)',
+    re.IGNORECASE,
+)
+
+
+def _label_segment_totals(text: str) -> str:
+    """Insert an explicit label before unlabeled segment profit subtotals."""
+    return _SEGMENT_TOTAL_RE.sub(
+        r'[Segment profit total — this is operating income]: \1\n\2',
+        text,
+    )
+
+
+def _keep_indices(plain: list[str]) -> list[int]:
     keep = set()
-    for i, p in enumerate(pages):
-        lower = p.lower()
-        if any(kw in lower for kw in _FS_KEYWORDS):
+    for i, p in enumerate(plain):
+        if any(kw in p.lower() for kw in _FS_KEYWORDS):
             keep.update([i - 1, i, i + 1])
-    keep = sorted(k for k in keep if 0 <= k < len(pages))
-    return [pages[i] for i in keep] if keep else pages
+    keep = sorted(k for k in keep if 0 <= k < len(plain))
+    return keep or list(range(len(plain)))
+
+
+def _format_tables(page) -> str:
+    tables = page.extract_tables() or []
+    lines = []
+    for table in tables:
+        for row in table:
+            cells = [str(c).strip() if c else "" for c in row]
+            lines.append("| " + " | ".join(cells) + " |")
+        lines.append("")
+    return "\n".join(lines)
 
 
 def extract_financial_text(pdf_path: Path) -> str:
     try:
         with pdfplumber.open(pdf_path) as pdf:
-            pages = [p.extract_text() or "" for p in pdf.pages]
-        if pages and pages[0].count("(cid:") > 10:
-            print("(cid font, retrying with pymupdf)", end="  ", flush=True)
-            import fitz
-            with fitz.open(pdf_path) as doc:
-                pages = [doc[i].get_text() for i in range(len(doc))]
-        return "\n\n".join(_financial_pages(pages))
+            plain = [p.extract_text() or "" for p in pdf.pages]
+            if plain and plain[0].count("(cid:") > 10:
+                print("(cid font, retrying with pymupdf)", end="  ", flush=True)
+                import fitz
+                with fitz.open(pdf_path) as doc:
+                    pages = [doc[i].get_text() for i in range(len(doc))]
+                return "\n\n".join(pages[i] for i in _keep_indices(pages))
+            parts = []
+            for i in _keep_indices(plain):
+                page_text = plain[i]
+                if any(kw in page_text.lower() for kw in _TABLE_TRIGGER_KEYWORDS):
+                    table_text = _format_tables(pdf.pages[i])
+                    if table_text.strip():
+                        parts.append(page_text + "\n\n[TABLES]\n" + table_text)
+                        continue
+                parts.append(page_text)
+            return _label_segment_totals("\n\n".join(parts))
     except Exception as e:
         return f"[PDF read error: {e}]"
 
@@ -127,8 +162,10 @@ Company: {company}, fiscal year ending in {year}.
   Use the {year} column only — ignore prior-year comparative columns.
 
 - capital_expenditures: Cash paid for purchases of property, plant and equipment for {year}
-  from the investing activities section of the Cash Flow Statement.
+  from the investing activities section of the Cash Flow Statement or financial statement notes.
   Use ONLY the continuing operations figure. Do NOT add discontinued operations CapEx.
+  If the same value appears at multiple precision levels (e.g. "1,125.1" in millions in MD&A
+  and "1,125,139" in thousands in the financial statements), use the more precise value.
 
 Return the RAW number exactly as printed in the financial statements.
 Find the unit in the nearest table header: "(in millions)", "(in thousands)", etc. If none, use "actual".

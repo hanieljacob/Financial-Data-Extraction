@@ -7,8 +7,8 @@ Automated extraction and evaluation of three financial metrics from SEC 10-K fil
 | Field | Definition |
 |---|---|
 | `operating_income` | Consolidated operating income (loss) from the income statement |
-| `income_tax` | Income tax expense (benefit) — positive = expense |
 | `stockholders_equity` | Parent-company-only stockholders' equity from the balance sheet |
+| `capital_expenditures` | Cash paid for property, plant and equipment (investing activities) |
 
 ## Pipeline
 
@@ -34,21 +34,21 @@ A single-source design (both the PDF and the XBRL facts come from the same EDGAR
 
 | Company | Year | Company | Year |
 |---------|------|---------|------|
-| AAPL | 2025 | META | 2025 |
-| ABBV | 2025 | MO | 2025 |
-| AMD | 2025 | MSFT | 2025 |
-| AMGN | 2025 | NVDA | 2026 |
-| AMZN | 2025 | ORCL | 2025 |
-| AVGO | 2025 | PEP | 2025 |
-| BIIB | 2021 | PG | 2025 |
-| BKNG | 2025 | PM | 2025 |
-| BLK | 2025 | QCOM | 2025 |
-| CMG | 2025 | SBUX | 2025 |
-| COST | 2025 | TJX | 2019 |
-| GILD | 2025 | WMT | 2026 |
-| GOOGL | 2025 | HD | 2026 |
-| JNJ | 2014 | KO | 2025 |
-| LOW | 2026 | MCD | 2025 |
+| AAPL | 2025 | KO | 2025 |
+| ABBV | 2025 | LOW | 2026 |
+| AMD | 2025 | MDLZ | 2025 |
+| AMGN | 2025 | META | 2025 |
+| AMZN | 2016 | MO | 2025 |
+| AVGO | 2025 | MSFT | 2025 |
+| BIIB | 2021 | NVDA | 2012 |
+| BKNG | 2025 | ORCL | 2025 |
+| BLK | 2025 | PG | 2025 |
+| CMG | 2025 | PM | 2025 |
+| COST | 2025 | SBUX | 2025 |
+| CVS | 2025 | SLB | 2023 |
+| GILD | 2025 | TJX | 2019 |
+| GOOGL | 2025 | UNH | 2025 |
+| KHC | 2025 | WMT | 2026 |
 
 ## Setup
 

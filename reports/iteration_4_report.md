@@ -34,7 +34,3 @@ A prior attempt (the failed intermediate run) used a 7-line verbose version of t
 
 - **TJX capex**: $39K rounding difference between PDF presentation and XBRL filing — irreducible.
 - **TJX operating_income**: TJX's 2019 income statement presents segment profits that sum to $4,763,227K as an **unlabeled subtotal** in the PDF text. The segment reconciliation rule hasn't resolved this — the model still returns a value near pretax income. This is a structural limitation of the plain-text PDF extraction: the subtotal appears as a bare number with no label, making it unreliable for the model to identify.
-
-## Notes
-
-The effective ceiling with the current prompt-only approach is **89/90**. TJX OI may require a different extraction strategy (e.g., structured table parsing rather than plain text) to reliably identify the unlabeled segment profit subtotal.

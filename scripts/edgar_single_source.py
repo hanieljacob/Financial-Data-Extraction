@@ -5,7 +5,7 @@ One filing per company — the most recent 10-K that has all three target metric
 as XBRL ground truth. PDFs and ground-truth values are tied to the same
 accession number, guaranteeing alignment.
 
-Target metrics: operating_income, income_tax, stockholders_equity
+Target metrics: operating_income, stockholders_equity, capital_expenditures
 
 Output: edgar_single_source.json — one row per company (≤200 rows)
 """
